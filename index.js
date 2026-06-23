@@ -1,3 +1,7 @@
+// Load variables from the .env file into process.env so the whole app
+// (including the Gemini service) can read keys like GEMINI_API_KEY.
+require('dotenv').config();
+
 const express = require('express');
 const path = require('path');
 const { Logger } = require('./utils/logger');
