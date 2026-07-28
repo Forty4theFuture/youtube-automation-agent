@@ -58,6 +58,28 @@ class GeminiService {
     return response.text;
   }
 
+  // Ask Gemini for JSON and hand back a real JavaScript object.
+  // Returns null if the reply can't be understood as JSON.
+  async generateJson(prompt) {
+    const raw = await this.generateText(prompt);
+    return GeminiService.parseJson(raw);
+  }
+
+  // Pulls a JSON object out of a text reply. AI models often wrap JSON in
+  // ```json ... ``` code fences, so we grab everything between the first "{"
+  // and the last "}" and parse that.
+  static parseJson(text) {
+    if (!text) return null;
+    try {
+      const start = text.indexOf('{');
+      const end = text.lastIndexOf('}');
+      if (start === -1 || end === -1) return null;
+      return JSON.parse(text.slice(start, end + 1));
+    } catch (error) {
+      return null;
+    }
+  }
+
   // A tiny "are we connected?" check used by test-gemini.js.
   async testConnection() {
     this.logger.info(`Testing Gemini connection (model: ${this.model})...`);

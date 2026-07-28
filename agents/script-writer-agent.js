@@ -112,8 +112,7 @@ class ScriptWriterAgent {
 
     try {
       const prompt = this.buildGeminiPrompt(script, strategy);
-      const raw = await this.gemini.generateText(prompt);
-      const ai = this.parseGeminiJson(raw);
+      const ai = await this.gemini.generateJson(prompt);
 
       if (!ai) {
         this.logger.warn('Could not read Gemini response — keeping template wording.');
@@ -159,20 +158,6 @@ Return ONLY valid JSON (no markdown, no code fences) in exactly this shape:
 }
 
 Write natural spoken English. Do not include stage directions, brackets, or sound effects.`;
-  }
-
-  // Gemini sometimes wraps JSON in ```json ... ``` fences. This safely pulls
-  // the JSON object out and parses it, returning null if it can't.
-  parseGeminiJson(text) {
-    if (!text) return null;
-    try {
-      const start = text.indexOf('{');
-      const end = text.lastIndexOf('}');
-      if (start === -1 || end === -1) return null;
-      return JSON.parse(text.slice(start, end + 1));
-    } catch (error) {
-      return null;
-    }
   }
 
   // Copy Gemini's words into the existing script object WITHOUT changing its
