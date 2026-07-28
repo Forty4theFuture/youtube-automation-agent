@@ -1,7 +1,7 @@
 // ci-smoke-test.js
 // A lightweight check for continuous integration (CI). It does NOT call any
 // external API — it just proves that:
-//   1. The Gemini-powered agents load without errors.
+//   1. The AI-powered agents load without errors.
 //   2. With no GEMINI_API_KEY set, they fall back cleanly and still produce
 //      a valid script and valid SEO metadata (nothing crashes).
 //
@@ -34,10 +34,11 @@ function assert(condition, message) {
 }
 
 async function main() {
-  // Make sure no key is present, so we are truly testing the fallback path.
+  // Make sure no AI keys are present, so we are truly testing the fallback path.
+  delete process.env.ANTHROPIC_API_KEY;
   delete process.env.GEMINI_API_KEY;
 
-  console.log('Smoke test: Script Writer (no Gemini key → templates)...');
+  console.log('Smoke test: Script Writer (no AI key → templates)...');
   const writer = new ScriptWriterAgent(fakeDb, {});
   await writer.initialize();
   const script = await writer.generateScript(strategy);
@@ -46,7 +47,7 @@ async function main() {
   assert(Array.isArray(script.mainContent.sections) && script.mainContent.sections.length > 0, 'script sections missing');
   assert(script.metadata.generatedBy === 'templates', 'expected template fallback for script');
 
-  console.log('Smoke test: SEO Optimizer (no Gemini key → rule-based)...');
+  console.log('Smoke test: SEO Optimizer (no AI key → rule-based)...');
   const seo = new SEOOptimizerAgent(fakeDb, {});
   await seo.initialize();
   const seoData = await seo.optimize(script, strategy);

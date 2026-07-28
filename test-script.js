@@ -1,7 +1,7 @@
 // test-script.js
 // Shows the Script Writer agent in action. It generates a real video script
 // for a sample topic and prints it, telling you whether the words were
-// written by Gemini (AI) or by the old built-in templates.
+// written by Claude (AI) or by the old built-in templates.
 //
 // Run it with:   npm run test:script
 
@@ -24,7 +24,7 @@ const sampleStrategy = {
 };
 
 async function main() {
-  console.log(chalk.cyan.bold('\n📝 Script Writer Test (with Gemini)'));
+  console.log(chalk.cyan.bold('\n📝 Script Writer Test (with Claude)'));
   console.log(chalk.gray('─'.repeat(50)));
 
   // We pass {} as credentials; the agent will read GEMINI_API_KEY from .env.
@@ -37,9 +37,9 @@ async function main() {
   const script = await agent.generateScript(sampleStrategy);
 
   const writtenBy = script.metadata.generatedBy;
-  const label = writtenBy === 'gemini'
-    ? chalk.green('Gemini (AI) ✅')
-    : chalk.yellow('built-in templates (no Gemini key found)');
+  const label = writtenBy === 'claude'
+    ? chalk.green('Claude (AI) ✅')
+    : chalk.yellow('built-in templates (no Claude key found)');
 
   console.log(chalk.white('✍️  Written by: ') + label);
   console.log(chalk.gray('─'.repeat(50)));
@@ -53,11 +53,11 @@ async function main() {
   console.log('  ' + (firstSection.content || '(no content)'));
 
   console.log(chalk.gray('\n─'.repeat(50)));
-  if (writtenBy === 'gemini') {
-    console.log(chalk.green.bold('✅ Success — Gemini wrote this script!\n'));
+  if (writtenBy === 'claude') {
+    console.log(chalk.green.bold('✅ Success — Claude wrote this script!\n'));
   } else {
-    console.log(chalk.yellow('ℹ️  No Gemini key detected, so templates were used.'));
-    console.log(chalk.yellow('   Add GEMINI_API_KEY to your .env and run again to see AI output.\n'));
+    console.log(chalk.yellow('ℹ️  No Claude key detected, so templates were used.'));
+    console.log(chalk.yellow('   Add ANTHROPIC_API_KEY to your .env and run again to see AI output.\n'));
   }
 }
 

@@ -1,5 +1,5 @@
 const { Logger } = require('../utils/logger');
-const { GeminiService } = require('../utils/gemini-service');
+const { ClaudeService } = require('../utils/claude-service');
 
 class SEOOptimizerAgent {
   constructor(db, credentials) {
@@ -9,7 +9,7 @@ class SEOOptimizerAgent {
     this.keywordDatabase = new Map();
 
     const savedCreds = (credentials && credentials.credentials) ? credentials.credentials : {};
-    this.gemini = new GeminiService(savedCreds);
+    this.claude = new ClaudeService(savedCreds);
   }
 
   async initialize() {
@@ -72,9 +72,9 @@ class SEOOptimizerAgent {
         createdAt: new Date().toISOString()
       };
 
-      // NEW: if Gemini is available, let it rewrite the title, description and
+      // NEW: if Claude is available, let it rewrite the title, description and
       // tags for better discoverability. Falls back to the rules above on error.
-      await this.applyGeminiSEO(seoData, script, strategy);
+      await this.applyClaudeSEO(seoData, script, strategy);
 
       // Re-score after any AI rewrite so the number reflects what we'll upload.
       seoData.seoScore = await this.calculateSEOScore(seoData.title, seoData.description, seoData.tags);
@@ -90,30 +90,30 @@ class SEOOptimizerAgent {
     }
   }
 
-  // ── Gemini integration ────────────────────────────────────────────────
-  // Rewrites title, description and tags with AI. Never throws: if Gemini is
+  // ── Claude integration ────────────────────────────────────────────────
+  // Rewrites title, description and tags with AI. Never throws: if Claude is
   // missing or errors, the rule-based values built in optimize() are kept.
 
-  async applyGeminiSEO(seoData, script, strategy) {
-    if (!this.gemini.isConfigured()) {
-      this.logger.info('Gemini not configured — using rule-based SEO.');
+  async applyClaudeSEO(seoData, script, strategy) {
+    if (!this.claude.isConfigured()) {
+      this.logger.info('Claude not configured — using rule-based SEO.');
       return;
     }
 
     try {
       const prompt = this.buildSEOPrompt(seoData, strategy);
-      const ai = await this.gemini.generateJson(prompt);
+      const ai = await this.claude.generateJson(prompt);
 
       if (!ai) {
-        this.logger.warn('Could not read Gemini response — keeping rule-based SEO.');
+        this.logger.warn('Could not read Claude response — keeping rule-based SEO.');
         return;
       }
 
-      this.mergeGeminiSEO(seoData, ai);
-      seoData.metadata.generatedBy = 'gemini';
-      this.logger.success('SEO title/description/tags written by Gemini.');
+      this.mergeClaudeSEO(seoData, ai);
+      seoData.metadata.generatedBy = 'claude';
+      this.logger.success('SEO title/description/tags written by Claude.');
     } catch (error) {
-      this.logger.warn(`Gemini SEO failed (${error.message}) — keeping rule-based SEO.`);
+      this.logger.warn(`Claude SEO failed (${error.message}) — keeping rule-based SEO.`);
     }
   }
 
@@ -134,9 +134,9 @@ Return ONLY valid JSON (no markdown, no code fences) in exactly this shape:
 }`;
   }
 
-  // Merge Gemini's SEO text in-place, enforcing YouTube's hard limits so an
+  // Merge Claude's SEO text in-place, enforcing YouTube's hard limits so an
   // over-long value can never break the upload step later.
-  mergeGeminiSEO(seoData, ai) {
+  mergeClaudeSEO(seoData, ai) {
     if (typeof ai.title === 'string' && ai.title.trim()) {
       // YouTube titles must be <= 100 characters.
       seoData.title = ai.title.trim().slice(0, 100);

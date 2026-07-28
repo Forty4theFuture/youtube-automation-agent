@@ -1,5 +1,5 @@
 const { Logger } = require('../utils/logger');
-const { GeminiService } = require('../utils/gemini-service');
+const { ClaudeService } = require('../utils/claude-service');
 
 class ScriptWriterAgent {
   constructor(db, credentials) {
@@ -8,10 +8,10 @@ class ScriptWriterAgent {
     this.logger = new Logger('ScriptWriter');
     this.templates = this.loadTemplates();
 
-    // The Gemini "translator". We read the saved API key from the credential
-    // manager if it exists; otherwise GeminiService falls back to .env.
+    // The Claude "translator". We read the saved API key from the credential
+    // manager if it exists; otherwise ClaudeService falls back to .env.
     const savedCreds = (credentials && credentials.credentials) ? credentials.credentials : {};
-    this.gemini = new GeminiService(savedCreds);
+    this.claude = new ClaudeService(savedCreds);
   }
 
   async initialize() {
@@ -82,9 +82,9 @@ class ScriptWriterAgent {
         }
       };
 
-      // NEW: if Gemini is available, let it rewrite the wording in-place.
+      // NEW: if Claude is available, let it rewrite the wording in-place.
       // If it isn't configured or fails, we simply keep the template script.
-      await this.applyGeminiWriting(script, strategy);
+      await this.applyClaudeWriting(script, strategy);
 
       // Format for readability
       script.fullScript = this.formatFullScript(script);
@@ -100,36 +100,36 @@ class ScriptWriterAgent {
     }
   }
 
-  // ── Gemini integration ────────────────────────────────────────────────
+  // ── Claude integration ────────────────────────────────────────────────
   // These methods upgrade the template script with real AI-written wording.
   // They never throw: if anything goes wrong, the template script is kept.
 
-  async applyGeminiWriting(script, strategy) {
-    if (!this.gemini.isConfigured()) {
-      this.logger.info('Gemini not configured — using template wording.');
+  async applyClaudeWriting(script, strategy) {
+    if (!this.claude.isConfigured()) {
+      this.logger.info('Claude not configured — using template wording.');
       return;
     }
 
     try {
-      const prompt = this.buildGeminiPrompt(script, strategy);
-      const ai = await this.gemini.generateJson(prompt);
+      const prompt = this.buildClaudePrompt(script, strategy);
+      const ai = await this.claude.generateJson(prompt);
 
       if (!ai) {
-        this.logger.warn('Could not read Gemini response — keeping template wording.');
+        this.logger.warn('Could not read Claude response — keeping template wording.');
         return;
       }
 
-      this.mergeGeminiIntoScript(script, ai);
-      script.metadata.generatedBy = 'gemini';
-      this.logger.success('Script wording written by Gemini.');
+      this.mergeClaudeIntoScript(script, ai);
+      script.metadata.generatedBy = 'claude';
+      this.logger.success('Script wording written by Claude.');
     } catch (error) {
-      this.logger.warn(`Gemini writing failed (${error.message}) — keeping template wording.`);
+      this.logger.warn(`Claude writing failed (${error.message}) — keeping template wording.`);
     }
   }
 
-  // Build the instructions we send to Gemini, based on the structure the
+  // Build the instructions we send to Claude, based on the structure the
   // templates already decided (topic, content type, and section titles).
-  buildGeminiPrompt(script, strategy) {
+  buildClaudePrompt(script, strategy) {
     const sectionTitles = script.mainContent.sections
       .map((s, i) => `${i + 1}. ${s.title}`)
       .join('\n');
@@ -160,9 +160,9 @@ Return ONLY valid JSON (no markdown, no code fences) in exactly this shape:
 Write natural spoken English. Do not include stage directions, brackets, or sound effects.`;
   }
 
-  // Copy Gemini's words into the existing script object WITHOUT changing its
+  // Copy Claude's words into the existing script object WITHOUT changing its
   // shape, so the rest of the pipeline (voice-over, captions, video) still works.
-  mergeGeminiIntoScript(script, ai) {
+  mergeClaudeIntoScript(script, ai) {
     if (ai.title) script.title = ai.title;
 
     if (ai.hook) script.hook.text = ai.hook;

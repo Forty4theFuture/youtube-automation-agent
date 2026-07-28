@@ -1,5 +1,5 @@
 // Load variables from the .env file into process.env so the whole app
-// (including the Gemini service) can read keys like GEMINI_API_KEY.
+// (including the Claude and Gemini services) can read keys like ANTHROPIC_API_KEY.
 require('dotenv').config();
 
 const express = require('express');
