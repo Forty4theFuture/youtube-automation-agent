@@ -232,6 +232,66 @@ curl -X POST http://localhost:3456/generate \
 npm start
 ```
 
+> By default the system runs in **simulation mode** — it writes real scripts,
+> titles, descriptions and captions, but the thumbnail/voice/video are
+> placeholders. That's free and perfect for testing. To make real videos, see
+> the next section.
+
+## 🎥 Producing Real Videos (Optional)
+
+Out of the box the pipeline produces everything *except* real media: the
+thumbnail, voice-over, and video are placeholder `.info` files. Turning out an
+actual, uploadable `.mp4` needs three extra pieces. If any one is missing, that
+step simply falls back to a placeholder and the rest of the pipeline keeps
+working — so you can add them one at a time.
+
+### 1. Media AI keys (thumbnails + voice)
+
+- **Thumbnails & visuals** — OpenAI DALL·E 3. Set `OPENAI_API_KEY` in `.env`.
+- **Voice-over** — pick one:
+  - **OpenAI text-to-speech** (reuses the same `OPENAI_API_KEY`), or
+  - **ElevenLabs** — set `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID`, or
+  - **Azure Speech** — set `AZURE_SPEECH_KEY` and `AZURE_SPEECH_REGION`.
+
+### 2. FFmpeg (stitches audio + visuals into the video)
+
+FFmpeg is a free tool the system shells out to when building the final `.mp4`.
+
+- **Windows**: `winget install Gyan.FFmpeg` — or download from
+  [ffmpeg.org](https://ffmpeg.org/download.html) and add its `bin` folder to your PATH
+- **Mac**: `brew install ffmpeg`
+- **Linux**: `sudo apt install ffmpeg`
+- Verify it's installed: `ffmpeg -version`
+
+### 3. A video renderer (choose one)
+
+- **Slideshow (default, free)** — renders animated slides in a headless browser.
+  Install the browser once: `npx playwright install chromium`
+- **AI video (optional, paid)** — Stable Video Diffusion via Replicate. Set
+  `REPLICATE_API_KEY` in `.env`; no browser needed.
+
+### `.env` recap for real videos
+
+```env
+OPENAI_API_KEY=your-key-here          # thumbnails + voice-over
+# Optional higher-quality voice (instead of OpenAI TTS):
+ELEVENLABS_API_KEY=your-key-here
+ELEVENLABS_VOICE_ID=your-voice-id
+# Optional AI video (instead of the free slideshow):
+REPLICATE_API_KEY=your-key-here
+```
+
+### Verify your video setup
+
+```bash
+ffmpeg -version                  # FFmpeg installed and on PATH?
+npx playwright install chromium  # browser for the slideshow renderer
+npm run test:claude              # Claude (text) reachable?
+```
+
+> 💡 Check the `logs/` folder after a run to see which steps ran for real vs.
+> simulated — each agent logs whether it used AI or a fallback.
+
 ## 📋 Daily Usage
 
 ### Automation Schedule
