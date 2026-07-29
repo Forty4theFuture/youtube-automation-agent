@@ -178,8 +178,10 @@ class YouTubeAutomationAgent {
     });
     this.logger.info('Production processing complete');
     
-    // Step 6: Save to database
-    const contentId = await this.db.saveProductionData(productionData);
+    // Step 6: The production record was already saved inside processContent();
+    // reuse its id instead of inserting it again (a second saveProductionData
+    // would violate the productions.id UNIQUE constraint and crash).
+    const contentId = productionData.id;
     this.logger.info(`Content saved with ID: ${contentId}`);
     
     return {
