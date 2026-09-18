@@ -131,7 +131,7 @@ class PublishingSchedulingAgent {
         defaultAudioLanguage: metadata.seo.metadata.language
       },
       status: {
-        privacyStatus: process.env.DEFAULT_PRIVACY_STATUS || 'public',
+        privacyStatus: process.env.DEFAULT_PRIVACY_STATUS || 'unlisted',
         publishAt: scheduleEntry.publishTime,
         selfDeclaredMadeForKids: false
       }

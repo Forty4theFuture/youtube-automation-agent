@@ -51,7 +51,26 @@ class AnalyticsOptimizationAgent {
       
       // Get analytics data
       const analytics = await this.getVideoAnalytics(videoId);
-      
+
+      // If analytics are unavailable, do NOT fabricate a score or insights —
+      // record an explicit no-data report instead of inventing numbers.
+      if (analytics && analytics.unavailable) {
+        const report = {
+          videoId,
+          videoDetails,
+          analytics,
+          dataAvailable: false,
+          note: 'YouTube Analytics unavailable (no auth or API error) — metrics not fabricated; not scored.',
+          performance: { score: null, grade: 'N/A', breakdown: null },
+          insights: [{ type: 'info', category: 'data', message: 'Analytics unavailable — no real metrics to report.' }],
+          analyzedAt: new Date().toISOString()
+        };
+        this.performanceData.set(videoId, report);
+        await this.db.saveAnalyticsReport(report);
+        this.logger.warn(`Analytics unavailable for ${videoId} — recorded as no-data (not scored).`);
+        return report;
+      }
+
       // Analyze thumbnail performance
       const thumbnailMetrics = await this.analyzeThumbnailPerformance(videoId);
       
@@ -617,20 +636,20 @@ class AnalyticsOptimizationAgent {
 
   // Simulation methods for when API is not available
   getSimulatedAnalytics(videoId) {
+    // Analytics unavailable (no auth / API error). Return an explicit
+    // "unavailable" shell — NEVER fabricate metrics with Math.random.
     return {
-      views: { totalViews: Math.floor(Math.random() * 50000), averageCTR: Math.random() * 10 },
-      watchTime: { averageViewPercentage: Math.random() * 100 },
-      engagement: { engagementRate: Math.random() * 10 },
-      trafficSources: { sources: [{ source: 'SEARCH', percentage: '30' }] }
+      unavailable: true,
+      views: { totalViews: 0, totalImpressions: 0, averageCTR: 0, dailyData: [] },
+      watchTime: { totalWatchTime: 0, averageViewDuration: 0, averageViewPercentage: 0 },
+      engagement: { engagementRate: 0 },
+      trafficSources: { sources: [] }
     };
   }
 
   getSimulatedDemographics() {
-    return {
-      ageGroups: [['18-24', 30], ['25-34', 40], ['35-44', 20]],
-      gender: [['male', 60], ['female', 40]],
-      primaryAudience: 'Males 25-34'
-    };
+    // Unavailable — do not invent audience percentages.
+    return { ageGroups: [], gender: [], primaryAudience: 'unknown', unavailable: true };
   }
 
   identifyPrimaryAudience(ageGroups, gender) {
@@ -674,9 +693,11 @@ class AnalyticsOptimizationAgent {
   }
 
   calculateAverageScore(reports) {
-    if (!reports.length) return 0;
-    const total = reports.reduce((sum, report) => sum + report.performance.score, 0);
-    return Math.round(total / reports.length);
+    // Only average reports that actually have a numeric score (skip no-data reports).
+    const scored = reports.filter(r => r.performance && typeof r.performance.score === 'number');
+    if (!scored.length) return 0;
+    const total = scored.reduce((sum, report) => sum + report.performance.score, 0);
+    return Math.round(total / scored.length);
   }
 
   generateChannelInsights(reports) {
@@ -691,8 +712,10 @@ class AnalyticsOptimizationAgent {
       insights.push('Channel performance needs significant improvement');
     }
     
-    // Analyze common issues
-    const lowRetentionVideos = reports.filter(r => 
+    // Analyze common issues (ignore no-data reports so we don't invent problems)
+    const lowRetentionVideos = reports.filter(r =>
+      r.dataAvailable !== false &&
+      r.analytics && r.analytics.watchTime &&
       r.analytics.watchTime.averageViewPercentage < 30
     ).length;
     

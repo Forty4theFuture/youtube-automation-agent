@@ -130,34 +130,39 @@ class ScriptWriterAgent {
   // Build the instructions we send to Claude, based on the structure the
   // templates already decided (topic, content type, and section titles).
   buildClaudePrompt(script, strategy) {
+    const channelName = process.env.CHANNEL_NAME || 'this channel';
+    const niche = process.env.CHANNEL_NICHE || "the channel's topic";
+    const voice = process.env.CHANNEL_VOICE || 'natural, spoken, concrete — no hype';
+    const never = process.env.CHANNEL_NEVER || 'no clickbait, no fake urgency, no invented facts';
+    const sectionCount = script.mainContent.sections.length;
     const sectionTitles = script.mainContent.sections
       .map((s, i) => `${i + 1}. ${s.title}`)
       .join('\n');
 
-    return `You are a professional YouTube scriptwriter. Write engaging spoken narration.
+    return `You are writing spoken narration for a ${strategy.contentType} video on "${channelName}" (${niche}).
+Voice: ${voice}. Audience: ${strategy.targetAudience || 'a general audience'}.
 
+GOAL: a tight, original spoken script a real presenter could read aloud.
 Topic: ${strategy.topic}
-Suggested angle: ${strategy.angle}
-Content type: ${strategy.contentType}
-Target audience: ${strategy.targetAudience || 'a general audience'}
-Tone: ${script.tone}
-
-Cover exactly ${script.mainContent.sections.length} main sections. Here are their working titles (you may improve the wording):
+Angle: ${strategy.angle}
+Cover exactly ${sectionCount} main sections (you may improve these working titles):
 ${sectionTitles}
 
 Return ONLY valid JSON (no markdown, no code fences) in exactly this shape:
 {
-  "title": "a catchy YouTube title under 70 characters",
-  "hook": "one or two sentence attention-grabbing opening line",
+  "title": "<=70 characters, honest, no bait",
+  "hook": "1-2 sentence opening, no bait",
   "introduction": "2-3 sentences welcoming viewers and previewing the video",
   "sections": [
     { "title": "section title", "narration": "2-4 sentences of spoken narration" }
   ],
   "conclusion": "2-3 sentence wrap up",
-  "callToAction": "one sentence asking viewers to like and subscribe"
+  "callToAction": "one specific sentence"
 }
 
-Write natural spoken English. Do not include stage directions, brackets, or sound effects.`;
+GROUND RULES: every claim must be general knowledge or clearly hedged — NEVER state invented figures, prices, dates, or "studies show". Speak to one viewer; vary sentence length; no filler. Write natural spoken English with no stage directions, brackets, or sound effects.
+NEVER: clickbait, fake urgency, "smash that like button" clichés, or copying another video's wording. Channel-specific: ${never}.
+FAILURE: if a section has no substantive content, write a shorter honest section rather than padding.`;
   }
 
   // Copy Claude's words into the existing script object WITHOUT changing its

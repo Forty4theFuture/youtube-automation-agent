@@ -236,7 +236,10 @@ class ContentStrategyAgent {
   }
 
   buildBrainstormPrompt(requestedTopic) {
-    const channelName = process.env.CHANNEL_NAME || 'a YouTube channel';
+    const channelName = process.env.CHANNEL_NAME || 'this channel';
+    const niche = process.env.CHANNEL_NICHE || process.env.TARGET_AUDIENCE || "the channel's established topic";
+    const voice = process.env.CHANNEL_VOICE || 'clear, helpful, specific — no hype';
+    const never = process.env.CHANNEL_NEVER || 'no fabricated statistics, no clickbait, no fear-baiting';
     const audience = process.env.TARGET_AUDIENCE || 'a general audience';
     const trending = (this.trendingTopics || [])
       .slice(0, 10)
@@ -244,22 +247,26 @@ class ContentStrategyAgent {
       .filter(Boolean);
     const recent = this.getRecentTopics();
 
-    return `You are a YouTube content strategist for "${channelName}", whose audience is ${audience}.
+    return `You are the content strategist for "${channelName}", a channel about ${niche}.
+Audience: ${audience}. Voice: ${voice}.
 
+GOAL: propose ONE genuinely useful next video that fits this niche and voice.
 ${requestedTopic
-      ? `The creator wants a video about: ${requestedTopic}. Refine it into the strongest possible video idea.`
-      : 'Propose the single best next video idea for this channel.'}
-
-Trending keywords right now: ${trending.length ? trending.join(', ') : '(none available)'}.
-Avoid repeating these recent topics: ${recent.length ? recent.join(', ') : '(none)'}.
+      ? `The creator wants a video about: ${requestedTopic}. Sharpen it into the strongest honest idea within the niche.`
+      : 'Choose the single best next video idea for this channel.'}
+INPUTS you may use: trending keywords [${trending.length ? trending.join(', ') : 'none'}]; avoid recent topics [${recent.length ? recent.join(', ') : 'none'}].
 
 Return ONLY valid JSON (no markdown, no code fences) in exactly this shape:
 {
-  "topic": "a specific, engaging video topic",
-  "angle": "a compelling title-style angle for the video",
+  "topic": "specific, searchable, not clickbait",
+  "angle": "an honest title that states the real value",
   "contentType": "one of: Tutorial, Explainer, List, Review, Story, News",
-  "targetAudience": "a short description of who this video is for"
-}`;
+  "targetAudience": "who specifically this is for",
+  "whyNow": "one sentence tying it to the niche or a real trend"
+}
+
+NEVER: invent statistics, view counts, prices, or studies; use bait phrasing ("you won't believe", "shocking", "nobody is telling you"); propose a topic outside the niche; or rehash a trending video without a distinct, original angle. Channel-specific: ${never}.
+FAILURE: if no trend fits the niche, choose an evergreen niche topic and set "whyNow" to "evergreen".`;
   }
 
   async generateContentStrategy(requestedTopic = null) {
