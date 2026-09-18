@@ -244,9 +244,11 @@ class CredentialManager {
       }
     ]);
 
-    this.credentials.azureSpeech = {
-      subscriptionKey: answers.subscriptionKey,
-      region: answers.region,
+    // Store under `azure` with the field names the media engine reads
+    // (utils/ai-video-generator.js: credentials.azure.speechKey/.speechRegion).
+    this.credentials.azure = {
+      speechKey: answers.subscriptionKey,
+      speechRegion: answers.region,
       voice: answers.voice
     };
 

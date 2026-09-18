@@ -83,7 +83,18 @@ class PublishingSchedulingAgent {
       if (!scheduleEntry) {
         throw new Error(`Content not found in queue: ${contentId}`);
       }
-      
+
+      // Honesty gate: never fake an upload. If media ran in simulation mode and
+      // there is no real rendered video file, mark the item as a draft and skip
+      // the upload instead of pretending to publish.
+      if (!(await this.hasRealVideo(scheduleEntry))) {
+        scheduleEntry.status = 'draft';
+        scheduleEntry.draftReason = 'No real video asset (media generated in simulation mode); not uploaded.';
+        await this.db.updateScheduleEntry(scheduleEntry);
+        this.logger.warn(`Draft only — "${scheduleEntry.title}": no real video asset, upload skipped.`);
+        return scheduleEntry;
+      }
+
       // Upload video to YouTube
       const uploadResult = await this.uploadToYouTube(scheduleEntry);
       
@@ -152,13 +163,24 @@ class PublishingSchedulingAgent {
   }
 
   async getVideoStream(videoPath) {
-    // In a real implementation, this would return a file stream
-    // For now, we'll simulate it
-    return JSON.stringify({
-      message: 'Video stream would be provided here',
-      path: videoPath,
-      timestamp: new Date().toISOString()
-    });
+    // Return a real read stream of the rendered video file. Callers must only
+    // reach this after hasRealVideo() has confirmed a real asset exists.
+    return require('fs').createReadStream(videoPath);
+  }
+
+  // True only when a real, non-placeholder video file exists on disk.
+  // Simulation mode writes .info/.assembly.json placeholders, which fail here.
+  async hasRealVideo(scheduleEntry) {
+    const video = scheduleEntry.metadata && scheduleEntry.metadata.video;
+    const videoPath = video && video.path;
+    if (!videoPath || video.simulated) return false;
+    if (!/\.(mp4|mov|webm|mkv)$/i.test(videoPath)) return false;
+    try {
+      const stat = await fs.stat(videoPath);
+      return stat.isFile() && stat.size > 0;
+    } catch (error) {
+      return false;
+    }
   }
 
   async uploadThumbnail(videoId, thumbnailPath) {
