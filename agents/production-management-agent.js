@@ -10,7 +10,11 @@ class ProductionManagementAgent {
     this.logger = new Logger('ProductionManagement');
     this.pipeline = [];
     this.assets = new Map();
-    this.aiVideoGenerator = new AIVideoGenerator(credentials);
+    // Pass the PARSED credentials object (not the CredentialManager instance) so
+    // media keys saved in config/credentials.json actually reach the generator.
+    // (AIVideoGenerator reads credentials.openai/.replicate/.azure/… directly.)
+    const savedCreds = (credentials && credentials.credentials) ? credentials.credentials : {};
+    this.aiVideoGenerator = new AIVideoGenerator(savedCreds);
   }
 
   async initialize() {
