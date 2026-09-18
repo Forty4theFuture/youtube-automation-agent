@@ -211,41 +211,37 @@ class ProductionManagementAgent {
   }
 
   async processThumbnail(thumbnail) {
+    // Use the thumbnail already produced by the Thumbnail Designer agent (Sharp,
+    // local, free). We no longer regenerate a separate DALL-E thumbnail here —
+    // that duplicated work and overwrote the designed thumbnail.
     try {
-      // Try to generate AI thumbnail first
-      const script = thumbnail.script || { title: 'Ethereal Dreamscript Video' };
-      const aiThumbnail = await this.aiVideoGenerator.generateThumbnail(script, 'ethereal');
-      
+      if (thumbnail && thumbnail.path &&
+          await fs.access(thumbnail.path).then(() => true).catch(() => false)) {
+        return {
+          path: thumbnail.path,
+          originalPath: thumbnail.path,
+          dimensions: thumbnail.dimensions || { width: 1280, height: 720 },
+          fileSize: thumbnail.fileSize || 0,
+          generatedWith: 'sharp'
+        };
+      }
+
+      // No usable thumbnail file — record a placeholder rather than faking one.
+      const placeholder = path.join(
+        __dirname, '..', 'data', 'assets',
+        `thumbnail_${Date.now()}.jpg.placeholder`
+      );
+      await fs.writeFile(placeholder, 'Thumbnail placeholder — no rendered thumbnail available');
       return {
-        path: aiThumbnail.path,
-        originalPath: thumbnail.path,
-        dimensions: aiThumbnail.dimensions,
-        fileSize: aiThumbnail.fileSize,
-        generatedWith: 'AI'
+        path: placeholder,
+        originalPath: thumbnail && thumbnail.path,
+        dimensions: (thumbnail && thumbnail.dimensions) || { width: 1280, height: 720 },
+        fileSize: 0,
+        generatedWith: 'placeholder'
       };
     } catch (error) {
-      this.logger.error('AI thumbnail generation failed:', error);
-      
-      // Fallback to original processing
-      const productionThumbnailPath = path.join(
-        __dirname, '..', 'data', 'assets', 
-        `thumbnail_${Date.now()}.jpg`
-      );
-      
-      if (thumbnail.path && await fs.access(thumbnail.path).then(() => true).catch(() => false)) {
-        const originalBuffer = await fs.readFile(thumbnail.path);
-        await fs.writeFile(productionThumbnailPath, originalBuffer);
-      } else {
-        // Create placeholder
-        await fs.writeFile(productionThumbnailPath + '.placeholder', 'Thumbnail placeholder');
-      }
-      
-      return {
-        path: productionThumbnailPath,
-        originalPath: thumbnail.path,
-        dimensions: thumbnail.dimensions || { width: 1792, height: 1024 },
-        fileSize: thumbnail.fileSize || 0
-      };
+      this.logger.error('Thumbnail processing failed:', error);
+      throw error;
     }
   }
 
